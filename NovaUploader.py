@@ -49,7 +49,7 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
-APP_VERSION = "0.6.1"
+APP_VERSION = "0.6.2"
 
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
@@ -1762,8 +1762,10 @@ class App(tk.Tk):
             return txt if len(txt) <= limit else txt[:limit - 1] + "…"
         if isinstance(data, dict):
             for key in ("message", "status", "jobName", "response"):
-                if data.get(key) not in (None, ""):
-                    return "%s=%s" % (key, data[key])
+                v = data.get(key)
+                if v not in (None, ""):
+                    v = " ".join(str(v).split())      # 去掉 \r\n 之类的换行，保持单行
+                    return "%s=%s" % (key, v or "ok")
             return "已返回 %d 个字段" % len(data)
         if isinstance(data, list):
             return "已返回 %d 条记录" % len(data)
@@ -1774,9 +1776,7 @@ class App(tk.Tk):
             self.events.put(("busy", True))
             try:
                 raw = self._scrub(fn(self.printer), secret)
-                full = raw if len(raw) <= 400 else raw[:399] + "…"
-                self.events.put(("logx", ("%s → %s" % (title, full),
-                                        "%s → %s" % (title, self._brief(raw)))))
+                self.events.put(("log", "%s → %s" % (title, self._brief(raw))))
             except Exception as exc:
                 self.events.put(("log", "%s 失败：%s"
                                  % (title, self._scrub(exc, secret))))
@@ -1932,8 +1932,6 @@ class App(tk.Tk):
                 kind, payload = self.events.get_nowait()
                 if kind == "log":
                     self._log(payload)
-                elif kind == "logx":
-                    self._log(payload[0], payload[1])
                 elif kind == "files":
                     self._fill_files(payload)
                 elif kind == "job":

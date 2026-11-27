@@ -13,3 +13,8 @@ printers.json
 printers.json.*
 history.json
 *.migrated
+
+# Android 构建产物（apk 走 Release，不入库）
+android/build/
+*.apk
+*.idsig

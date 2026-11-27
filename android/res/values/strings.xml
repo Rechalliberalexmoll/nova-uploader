@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nova 打印机</string>
+    <string name="ip_hint">打印机 IP，例如 192.168.1.61</string>
+    <string name="save">保存</string>
+    <string name="pause">暂停</string>
+    <string name="resume">继续</string>
+    <string name="stop">停止打印</string>
+    <string name="history">打印历史</string>
+</resources>

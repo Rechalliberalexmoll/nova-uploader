@@ -9,6 +9,8 @@
 
 Nova3D 树脂 3D 打印机的第三方管理工具。直接调用打印机固件自带的 HTTP 接口（8081 端口），不依赖官方 NovaMaker，也不需要联网或登录账号。
 
+仓库同时包含两端，共用同一套打印机接口：**Windows 桌面版**（`pc/`，功能完整）与**安卓监控端**（`android/`，聚焦看状态与简单控制）。
+
 起因是官方软件在这台机器上「一点上传就卡死」。查下去发现不是网络问题——是打开 Windows 原生文件对话框后，进程的 Winsock 会处于未初始化状态，之后所有网络请求都报 `[Errno 10093]`，而 NovaMaker 不会自愈，只能杀进程重启。既然接口都是公开的 HTTP，干脆自己写一个，顺手把这个坑也填了。
 
 ![主界面](assets/main.png)
@@ -85,21 +87,54 @@ Nova3D 打印机固件在 `8081` 端口暴露一组 HTTP 接口，本工具只�
 ## 从源码构建
 
 ```powershell
+cd pc
 pip install pyinstaller
 pyinstaller --noconfirm --onefile --windowed --name NovaUploader `
   --icon NovaUploader.ico NovaUploader.py
 ```
 
-产出单个 exe（约 11 MB）。直接运行源码则只需 `python NovaUploader.py`。
+产出单个 exe（约 11 MB）。直接运行源码则只需 `python pc\NovaUploader.py`。
 
 ## 仓库结构
 
 ```
-NovaUploader.py           单文件源码（界面 + 打印机接口 + 逻辑）
-NovaUploader.ico          应用图标（构建用）
-启动 NovaUploader.vbs      源码版启动器（用 pythonw 运行，不弹黑框）
-assets/main.png           界面截图
+pc/                        Windows 桌面版
+  NovaUploader.py          单文件源码（界面 + 打印机接口 + 逻辑）
+  NovaUploader.ico         应用图标（构建用）
+  启动 NovaUploader.vbs     源码版启动器（用 pythonw 运行，不弹黑框）
+android/                   安卓监控端
+  AndroidManifest.xml
+  build.ps1                构建脚本（aapt2 + javac + d8，不使用 Gradle）
+  novactl.keystore         签名密钥（保证后续版本可覆盖安装）
+  res/                     资源与布局
+  src/                     Java 源码
+assets/main.png            桌面版界面截图
+README.md / README.en.md
+LICENSE
 ```
+
+exe 与 apk 均走 Release，不入库；`printers.json` / `history.json` 含打印机 IP 与序列号，已在 `.gitignore` 中排除。
+
+## 安卓端
+
+手机直连打印机，不经过电脑，也不经过厂商云端。功能是桌面版的子集，聚焦「看状态 + 简单控制」：
+
+- **连接信息**：机型（型号代码映射为商品名）与序列号
+- **打印状态**：层进度、已用与剩余时间、层高与曝光参数
+- **打印控制**：暂停 / 继续、停止
+- **Z 轴**：四档升降 + 归位，打印中自动锁定
+- **文件列表**：点选打印机上的文件直接起印（不做上传）
+- **打印历史**：默认折叠，展开显示打印机上最近 10 条任务
+
+构建需要 JDK 17、Android build-tools 34 与 platform 34，不使用 Gradle：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File android\build.ps1
+```
+
+工具链默认放在 `D:\AndroidDev`，可用环境变量 `ANDROID_TOOLCHAIN` 指向其他位置。产物为 `android\NovaCtl.apk`（约 61 KB）。
+
+安装时允许「未知来源」即可。签名密钥 `novactl.keystore` 已入库，目的是保证后续版本能覆盖安装、不丢数据；若要公开发布，建议换成自己的密钥并妥善保管。
 
 ## 已知限制
 

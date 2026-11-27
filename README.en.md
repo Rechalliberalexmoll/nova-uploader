@@ -9,6 +9,8 @@
 
 A third-party management tool for Nova3D resin 3D printers. It talks straight to the HTTP API that the printer firmware exposes on port 8081 — no NovaMaker, no internet connection, no account.
 
+The repo ships two clients that share the same printer API: the **Windows desktop app** (`pc/`, full feature set) and the **Android monitor** (`android/`, focused on status and quick control).
+
 It exists because the official software froze on this machine the moment you hit Upload. The cause turned out not to be the network: after opening a native Windows file dialog, the process's Winsock is left uninitialised, so every subsequent request fails with `[Errno 10093]`. NovaMaker never recovers from that state — the only way out is killing the process. Since the whole API is plain HTTP anyway, writing a replacement was the simpler fix, and it could repair the Winsock problem along the way.
 
 ![Main window](assets/main.png)
@@ -85,21 +87,54 @@ If a particular printer turns out to be noticeably off, add a `lift_scale` field
 ## Building from source
 
 ```powershell
+cd pc
 pip install pyinstaller
 pyinstaller --noconfirm --onefile --windowed --name NovaUploader `
   --icon NovaUploader.ico NovaUploader.py
 ```
 
-That produces a single exe of about 11 MB. To run from source instead, just `python NovaUploader.py`.
+That produces a single exe of about 11 MB. To run from source instead, just `python pc\NovaUploader.py`.
 
 ## Repository layout
 
 ```
-NovaUploader.py           single-file source (UI + printer API + logic)
-NovaUploader.ico          application icon (used at build time)
-启动 NovaUploader.vbs      launcher for the source version (pythonw, no console window)
-assets/main.png           screenshot
+pc/                       Windows desktop app
+  NovaUploader.py          single-file source (UI + printer API + logic)
+  NovaUploader.ico         application icon (used at build time)
+  启动 NovaUploader.vbs     launcher for the source version (pythonw, no console window)
+android/                  Android monitor
+  AndroidManifest.xml
+  build.ps1                build script (aapt2 + javac + d8, no Gradle)
+  novactl.keystore         signing key (keeps future versions upgradeable in place)
+  res/                     resources and layouts
+  src/                     Java sources
+assets/main.png           desktop app screenshot
+README.md / README.en.md
+LICENSE
 ```
+
+Both the exe and the apk ship through Releases and are not committed. `printers.json` / `history.json` contain printer IPs and serial numbers and are excluded via `.gitignore`.
+
+## Android app
+
+The phone talks straight to the printer — no PC in the middle, no vendor cloud. It is a subset of the desktop app, built around status and quick control:
+
+- **Connection info** — model (code mapped to the product name) and serial number
+- **Print status** — layer progress, elapsed / remaining time, layer height and exposure
+- **Print control** — pause / resume, stop
+- **Z axis** — four jog steps plus home, locked automatically while printing
+- **File list** — pick a file already on the printer and start it (no upload)
+- **Print history** — collapsed by default; expands to the printer's last 10 jobs
+
+Building needs JDK 17, Android build-tools 34 and platform 34. No Gradle:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File android\build.ps1
+```
+
+The toolchain defaults to `D:\AndroidDev`; set `ANDROID_TOOLCHAIN` to point elsewhere. Output is `android\NovaCtl.apk` (about 61 KB).
+
+On the phone, allow "unknown sources" and install. The signing key `novactl.keystore` is committed so later builds upgrade in place without losing data; if you plan to publish the app, swap it for your own key and keep it safe.
 
 ## Known limitations
 

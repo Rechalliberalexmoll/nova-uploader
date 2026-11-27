@@ -375,6 +375,6 @@
             android:layout_marginBottom="8dp"
             android:gravity="center"
             android:textSize="11sp"
-            android:text="v0.6.4" />
+            android:text="v0.6.5" />
     </LinearLayout>
 </ScrollView>

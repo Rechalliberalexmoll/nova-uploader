@@ -49,7 +49,7 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
-APP_VERSION = "0.6.4"
+APP_VERSION = "0.6.5"
 
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
@@ -414,18 +414,19 @@ def fmt_duration(seconds):
 # ==================== 界面主题 ====================
 # 配色取自 NovaMaker 原版界面截图的实际采样值
 THEME = {
-    "bg":        "#323232",   # 页面底色
-    "card":      "#464646",   # 卡片正文
-    "header":    "#5F5F5F",   # 卡片标题栏
-    "btn":       "#5F5F5F",   # 按钮
-    "btn_hover": "#6E6E6E",
-    "btn_down":  "#4A4A4A",
-    "row":       "#3D3D3D",   # 未选中的列表行
-    "trough":    "#323232",   # 进度条槽
+    "bg":        "#262626",   # 页面底色
+    "card":      "#333333",   # 卡片正文
+    "header":    "#3D3D3D",   # 卡片标题栏
+    "btn":       "#454545",   # 按钮
+    "btn_hover": "#525252",
+    "btn_down":  "#393939",
+    "row":       "#2C2C2C",   # 未选中的列表行 / 凹陷面
+    "trough":    "#242424",   # 进度条槽
+    "line":      "#454545",   # 卡片描边 / 分隔线
     "accent":    "#0097E0",   # 强调蓝（选中项 / 进度条）
     "accent_hi": "#2AAEEC",
     "text":      "#E8E8E8",
-    "text_dim":  "#A4A4A4",
+    "text_dim":  "#9B9B9B",
     "ok":        "#3FBF6F",
     "warn":      "#E0A33C",
     "err":       "#E06C6C",
@@ -450,8 +451,8 @@ class RoundButton(tk.Canvas):
 
     def __init__(self, master, text="", command=None, width=None, height=34,
                  fill=None, fg=None, hover=None, radius=6, font_size=10,
-                 bold=False, s=1.0, padx=10):
-        bg = master.cget("bg")
+                 bold=False, s=1.0, padx=10, bg=None):
+        bg = bg or master.cget("bg")
         if width:
             w = int(width * s)
         else:
@@ -485,8 +486,8 @@ class RoundButton(tk.Canvas):
 
     def _color(self):
         if not self._enabled:
-            # 必须和卡片底色 #464646 拉开差距，否则禁用按钮会“消失”
-            return "#3A3A3A", "#787878"
+            # 必须和卡片底色拉开差距，否则禁用按钮会“消失”
+            return "#2B2B2B", "#6E6E6E"
         if self._inside:
             return self._hover, self._fg
         return self._fill, self._fg
@@ -672,7 +673,7 @@ class SlimScrollbar(tk.Canvas):
             top = max(0.0, bot - min_h)
         self._thumb = (top, bot)
         pad = max(1.0, 2.0 * self.s)
-        color = "#8E8E8E" if self._hover else "#6A6A6A"
+        color = "#7A7A7A" if self._hover else "#555555"
         round_rect(self, pad, top, w - pad, bot, (w - 2 * pad) / 2.0,
                    fill=color, outline="")
 
@@ -700,29 +701,86 @@ class SlimScrollbar(tk.Canvas):
 
 
 class Card(tk.Frame):
-    """带标题栏的卡片容器，标题栏颜色比正文略浅。"""
+    """圆角卡片：圆角底与标题栏都画在 Canvas 上，内容放在 body 里。
 
-    def __init__(self, master, title="", s=1.0, header_height=34):
-        super().__init__(master, bg=THEME["card"])
+    body 仍是普通 Frame，内部照常 pack/grid；Canvas 只负责外观，
+    所以不会影响原有的布局方式。
+    """
+
+    def __init__(self, master, title="", s=1.0, radius=10, header_height=34):
+        page = master.cget("bg")
+        super().__init__(master, bg=page)
         self.s = s
-        self.head = tk.Frame(self, bg=THEME["header"], height=int(header_height * s))
-        self.head.pack(fill="x")
-        self.head.pack_propagate(False)
-        self.title_label = tk.Label(self.head, text=title, bg=THEME["header"],
-                                    fg=THEME["text"], font=(FONT, 10), anchor="w")
-        self.title_label.pack(side="left", padx=int(14 * s))
-        self.body = tk.Frame(self, bg=THEME["card"])
-        self.body.pack(fill="both", expand=True)
+        self.radius = max(2, int(radius * s))
+        self.header_h = int(header_height * s)
+        self._title = title
+        self._hw = ()
+
+        self.canvas = tk.Canvas(self, bg=page, highlightthickness=0, bd=0)
+        self.canvas.pack(fill="both", expand=True)
+
+        self.body = tk.Frame(self.canvas, bg=THEME["card"])
+        self._body_item = self.canvas.create_window(0, 0, window=self.body, anchor="nw")
+        self.canvas.bind("<Configure>", lambda _e: self._relayout())
+
+    def add_header_widget(self, widget):
+        """把控件贴到标题栏右端。"""
+        item = self.canvas.create_window(0, 0, window=widget, anchor="e")
+        self._hw = self._hw + ((item, widget),)
+        self._relayout()
+        return widget
+
+    def _relayout(self):
+        c = self.canvas
+        w, h = c.winfo_width(), c.winfo_height()
+        if w <= 8 or h <= 8:
+            return
+        c.delete("deco")
+        pad, r = 1, self.radius
+        round_rect(c, pad, pad, w - pad, h - pad, r, fill=THEME["card"],
+                   outline=THEME["line"], width=1, tags="deco")
+
+        top = pad + self.header_h
+        if self.header_h:
+            # 标题栏：上圆角、下平直——先画大圆角矩形，再用同色矩形压平下缘
+            round_rect(c, pad, pad, w - pad, top + r, r,
+                       fill=THEME["header"], outline="", tags="deco")
+            c.create_rectangle(pad, top - 1, w - pad, top + r + 1,
+                               fill=THEME["header"], outline="", tags="deco")
+            c.create_line(pad + r, top + 0.5, w - pad - r, top + 0.5,
+                          fill=THEME["line"], tags="deco")
+            c.create_text(pad + int(14 * self.s), pad + self.header_h / 2.0,
+                          text=self._title, anchor="w", fill=THEME["text"],
+                          font=(FONT, 10, "bold"), tags="deco")
+
+        c.coords(self._body_item, pad + 1, top)
+        c.itemconfigure(self._body_item,
+                        width=max(1, w - 2 * pad - 2),
+                        height=max(1, h - top - pad - 1))
+        for item, widget in self._hw:
+            widget.update_idletasks()
+            c.coords(item, w - pad - int(6 * self.s), pad + self.header_h / 2.0)
+        c.tag_lower("deco")
+
+        # 让 fill="x" 的侧栏卡片按内容自适应高度（被拉伸的卡片不受影响）
+        need = top + self.body.winfo_reqheight() + pad + 1
+        if c.winfo_reqheight() != need:
+            c.configure(height=need)
 
 
 class PrinterRow(tk.Frame):
     """左侧打印机列表里的一行，选中时整行变强调蓝。"""
 
     def __init__(self, master, s, on_click):
-        super().__init__(master, bg=THEME["row"], cursor="hand2")
+        page = master.cget("bg")
+        super().__init__(master, bg=page, cursor="hand2")
         self.s = s
         self._on_click = on_click
         self._selected = False
+        self.radius = max(2, int(6 * s))
+        # 圆角底画在用 place 铺满的 Canvas 上，不参与布局
+        self._bgc = tk.Canvas(self, bg=page, highlightthickness=0, bd=0)
+        self._bgc.place(x=0, y=0, relwidth=1, relheight=1)
         pad = int(10 * s)
         self.t1 = tk.Label(self, text="", bg=THEME["row"], fg=THEME["text"],
                            font=(FONT, 9), anchor="w")
@@ -730,8 +788,18 @@ class PrinterRow(tk.Frame):
         self.t2 = tk.Label(self, text="", bg=THEME["row"], fg=THEME["text_dim"],
                            font=(FONT, 9), anchor="w")
         self.t2.pack(fill="x", padx=pad, pady=(0, int(8 * s)))
-        for w in (self, self.t1, self.t2):
+        for w in (self, self.t1, self.t2, self._bgc):
             w.bind("<Button-1>", self._click)
+        self.bind("<Configure>", lambda _e: self._paint())
+
+    def _paint(self):
+        c = self._bgc
+        w, h = self.winfo_width(), self.winfo_height()
+        c.delete("all")
+        if w <= 4 or h <= 4:
+            return
+        fill = THEME["accent"] if self._selected else THEME["row"]
+        round_rect(c, 0, 0, w, h, self.radius, fill=fill, outline="")
 
     def _click(self, _e):
         self._on_click(self)
@@ -741,9 +809,9 @@ class PrinterRow(tk.Frame):
         bg = THEME["accent"] if selected else THEME["row"]
         fg1 = "#FFFFFF" if selected else THEME["text"]
         fg2 = "#E3F4FD" if selected else THEME["text_dim"]
-        self.configure(bg=bg)
         self.t1.configure(text=line1, bg=bg, fg=fg1)
         self.t2.configure(text=line2, bg=bg, fg=fg2)
+        self._paint()
 
 
 class Toast(tk.Toplevel):
@@ -1011,7 +1079,7 @@ class App(tk.Tk):
         self.option_add("*TCombobox*Listbox.foreground", THEME["text"])
         self.option_add("*TCombobox*Listbox.selectBackground", THEME["accent"])
         self.option_add("*TCombobox*Listbox.selectForeground", "#FFFFFF")
-        style.configure("Dark.Treeview", background=THEME["card"], fieldbackground=THEME["card"],
+        style.configure("Dark.Treeview", background=THEME["row"], fieldbackground=THEME["row"],
                         foreground=THEME["text"], borderwidth=0, relief="flat",
                         rowheight=int(26 * s), font=(FONT, 9))
         style.configure("Dark.Treeview.Heading", background=THEME["header"],
@@ -1069,8 +1137,9 @@ class App(tk.Tk):
 
         card_p = Card(side, "选择打印机", s)
         card_p.pack(fill="x")
-        RoundButton(card_p.head, text="⟳", width=28, height=22, s=s, font_size=10,
-                    command=self._refresh_all).pack(side="right", padx=int(8 * s), pady=int(6 * s))
+        card_p.add_header_widget(
+            RoundButton(card_p.canvas, text="⟳", width=28, height=22, s=s, font_size=10,
+                        bg=THEME["header"], command=self._refresh_all))
 
         self.rows_box = tk.Frame(card_p.body, bg=THEME["card"])
         self.rows_box.pack(fill="x", padx=int(8 * s), pady=int(8 * s))

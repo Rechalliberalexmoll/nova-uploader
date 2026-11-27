@@ -126,6 +126,8 @@ exe 与 apk 均走 Release，不入库；`printers.json` / `history.json` 含打
 - **文件列表**：点选打印机上的文件直接起印（不做上传）
 - **打印历史**：默认折叠，展开显示打印机上最近 10 条任务
 
+已在 Nova3D L3130-K40（固件 6.0.6）上实机验证：状态刷新、暂停/继续、停止、Z 轴四档升降与归位、从文件列表起印均正常。
+
 构建需要 JDK 17、Android build-tools 34 与 platform 34，不使用 Gradle：
 
 ```powershell

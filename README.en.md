@@ -126,6 +126,8 @@ The phone talks straight to the printer — no PC in the middle, no vendor cloud
 - **File list** — pick a file already on the printer and start it (no upload)
 - **Print history** — collapsed by default; expands to the printer's last 10 jobs
 
+Verified on hardware (Nova3D L3130-K40, firmware 6.0.6): live status, pause / resume, stop, the four Z jog steps plus home, and starting a print from the file list.
+
 Building needs JDK 17, Android build-tools 34 and platform 34. No Gradle:
 
 ```powershell

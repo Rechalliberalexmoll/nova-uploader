@@ -49,7 +49,7 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.6.1"
 
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
@@ -757,6 +757,9 @@ class Toast(tk.Toplevel):
             self.attributes("-topmost", True)
         except Exception:
             pass
+        message = str(message)
+        if len(message) > 120:
+            message = message[:117] + "…"
         accent = {"ok": THEME["ok"], "warn": THEME["warn"],
                   "err": THEME["err"]}.get(kind, THEME["accent"])
         wrap = tk.Frame(self, bg=accent)
@@ -978,6 +981,7 @@ class App(tk.Tk):
         self.hist_win = None
         self._notify_on = bool(self.cfg.get("notify", True))
         self._active_job_id = None
+        self._lost_active = 0
         self.printer_rows = []
 
         self._build_ui()
@@ -1841,8 +1845,21 @@ class App(tk.Tk):
         prev_id = getattr(self, "_active_job_id", None)
         now_id = info.get("id") if (info and info.get("active")) else None
         if prev_id and prev_id != now_id:
-            self._notify_finished(prev_id)
-        self._active_job_id = now_id
+            # 只有确认进入终态才算结束。打印刚启动时固件会短暂报 printInProgress=false
+            # （预热/回零），那种抖动不能当成"打印结束"，否则开打就弹一条错误通知。
+            st = (self.history.get(str(prev_id)) or {}).get("status")
+            if st in ("Completed", "Cancelled", "Stopped"):
+                self._notify_finished(prev_id)
+                self._active_job_id = now_id
+                self._lost_active = 0
+            else:
+                self._lost_active += 1
+                if self._lost_active >= 3:      # 连续 3 次（约 15 秒）都没了才放弃跟踪
+                    self._active_job_id = now_id
+                    self._lost_active = 0
+        else:
+            self._active_job_id = now_id
+            self._lost_active = 0
         self._printing = bool(info and info.get("active"))
         self._paused = bool(info and info.get("paused"))
         self._job_id = info.get("id") if info else None
@@ -1964,7 +1981,9 @@ class App(tk.Tk):
 
     def _notify_finished(self, job_id):
         rec = self.history.get(str(job_id)) or {}
-        name = rec.get("name") or "任务"
+        name = str(rec.get("name") or "任务")
+        if len(name) > 46:
+            name = name[:45] + "…"
         raw = rec.get("status") or ""
         cn = STATUS_CN.get(raw, raw or "已结束")
         ok = (raw == "Completed")

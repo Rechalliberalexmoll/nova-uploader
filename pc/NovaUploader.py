@@ -49,7 +49,7 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
-APP_VERSION = "0.6.5"
+APP_VERSION = "0.6.6"
 
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
@@ -1107,13 +1107,16 @@ class App(tk.Tk):
         status.pack_propagate(False)
         # 先摆按钮：按钮宽度固定，标签只占剩余空间，长文本不会再挤坏按钮
         RoundButton(status, text="日志", width=74, height=26, s=s,
-                    command=self._show_log).pack(side="right", padx=int(12 * s), pady=int(8 * s))
+                    command=self._show_log).pack(side="right",
+                                                 padx=(int(8 * s), int(12 * s)),
+                                                 pady=int(8 * s))
         RoundButton(status, text="打印历史", width=90, height=26, s=s,
-                    command=self._show_history).pack(side="right", padx=(0, int(6 * s)),
+                    command=self._show_history).pack(side="right",
+                                                     padx=(int(8 * s), 0),
                                                      pady=int(8 * s))
         self.btn_notify = RoundButton(status, text="", width=82, height=26, s=s,
                                       command=self._toggle_notify)
-        self.btn_notify.pack(side="right", padx=(0, int(6 * s)), pady=int(8 * s))
+        self.btn_notify.pack(side="right", padx=(int(8 * s), 0), pady=int(8 * s))
         self._sync_notify_btn()
 
         self.lbl_status = tk.Label(status, text="就绪", bg=THEME["bg"], fg=THEME["text_dim"],
@@ -1131,7 +1134,7 @@ class App(tk.Tk):
         body.rowconfigure(2, weight=1)
 
         # ---- 左栏：选择打印机 + 连接信息 ----
-        side = tk.Frame(body, bg=THEME["bg"], width=int(272 * s))
+        side = tk.Frame(body, bg=THEME["bg"], width=int(238 * s))
         side.grid(row=0, column=0, rowspan=3, sticky="nsew", padx=(0, int(5 * s)))
         side.grid_propagate(False)
 
@@ -1314,12 +1317,12 @@ class App(tk.Tk):
         bar = tk.Frame(card.body, bg=THEME["card"])
         bar.pack(side="bottom", fill="x", padx=int(10 * s), pady=(0, int(10 * s)))
         RoundButton(bar, text="删除选中", width=104, height=32, s=s,
-                    command=self._delete_selected).pack(side="left")
+                    command=self._delete_selected).pack(side="left", padx=(0, int(8 * s)))
         RoundButton(bar, text="刷新", width=78, height=32, s=s,
-                    command=self._refresh_files).pack(side="left", padx=int(8 * s))
+                    command=self._refresh_files).pack(side="left", padx=(0, int(8 * s)))
         RoundButton(bar, text="开始打印", width=96, height=32, s=s,
                     fill=THEME["accent"], hover=THEME["accent_hi"],
-                    command=self._start_print).pack(side="right")
+                    command=self._start_print).pack(side="right", padx=(int(8 * s), 0))
 
     def _build_upload_card(self, card):
         s = self.s
@@ -1335,11 +1338,11 @@ class App(tk.Tk):
         bar = tk.Frame(card.body, bg=THEME["card"])
         bar.pack(side="bottom", fill="x", padx=int(10 * s), pady=(0, int(8 * s)))
         RoundButton(bar, text="选择 .cws 文件", height=32, s=s,
-                    command=self._pick_files).pack(side="left")
+                    command=self._pick_files).pack(side="left", padx=(0, int(8 * s)))
         self.btn_upload = RoundButton(bar, text="开始上传", width=90, height=32, s=s,
                                       fill=THEME["accent"], hover=THEME["accent_hi"],
                                       command=self._start_upload)
-        self.btn_upload.pack(side="left", padx=int(8 * s))
+        self.btn_upload.pack(side="left", padx=(0, int(8 * s)))
         RoundButton(bar, text="清空", width=64, height=32, s=s,
                     command=self._clear_queue).pack(side="left")
 

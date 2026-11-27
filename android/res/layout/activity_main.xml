@@ -49,6 +49,18 @@
                 android:paddingRight="16dp"
                 android:text="@string/save"
                 android:textColor="#FFFFFFFF" />
+
+            <Button
+                android:id="@+id/btnRefresh"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/btn_bg"
+                android:minWidth="0dp"
+                android:paddingLeft="14dp"
+                android:paddingRight="14dp"
+                android:text="@string/refresh"
+                android:textColor="@color/text" />
         </LinearLayout>
 
         <!-- 连接信息 -->
@@ -375,6 +387,6 @@
             android:layout_marginBottom="8dp"
             android:gravity="center"
             android:textSize="11sp"
-            android:text="v0.6.5" />
+            android:text="v0.6.6" />
     </LinearLayout>
 </ScrollView>

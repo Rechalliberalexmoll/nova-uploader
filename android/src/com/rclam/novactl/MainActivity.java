@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity {
 
     /** 与桌面版 NovaUploader 同代，便于两边对照。 */
-    private static final String APP_VERSION = "0.6.5";
+    private static final String APP_VERSION = "0.6.6";
     private static final int PORT = 8081;
     private static final int POLL_MS = 3000;
     private static final int TIMEOUT_MS = 5000;
@@ -122,6 +122,18 @@ public class MainActivity extends Activity {
                         .putString("ip", ip).apply();
                 lastFileSig = "";
                 toast("已保存");
+                ui.removeCallbacks(pollTick);
+                ui.post(pollTick);
+            }
+        });
+
+        findViewById(R.id.btnRefresh).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 立即重新拉取：清掉文件签名并重置轮询，不等下一个 3 秒周期
+                lastFileSig = "";
+                tvConn.setText("刷新中…");
+                tvConn.setTextColor(colorOf(R.color.text_dim));
                 ui.removeCallbacks(pollTick);
                 ui.post(pollTick);
             }

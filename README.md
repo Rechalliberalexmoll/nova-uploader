@@ -1,5 +1,6 @@
 ﻿# NovaUploader
 
+![version](https://img.shields.io/badge/version-0.6.0-blue)
 ![platform](https://img.shields.io/badge/platform-Windows-blue)
 ![python](https://img.shields.io/badge/python-3.9%2B-3776AB)
 ![license](https://img.shields.io/badge/license-MIT-green)

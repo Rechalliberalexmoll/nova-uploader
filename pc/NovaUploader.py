@@ -49,7 +49,7 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
-APP_VERSION = "0.6.6"
+APP_VERSION = "0.6.7"
 
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
@@ -463,7 +463,9 @@ class RoundButton(tk.Canvas):
                 w = f.measure(text) + int((padx * 2 + 6) * s)
             except Exception:
                 w = int(90 * s)
-        super().__init__(master, height=int(height * s), width=max(int(48 * s), w),
+        # 显式给宽度时允许比自适应下限更窄（窄侧栏里的图标/短文本按钮）
+        floor = int(28 * s) if width else int(48 * s)
+        super().__init__(master, height=int(height * s), width=max(floor, w),
                          bg=bg, highlightthickness=0, bd=0, takefocus=0)
         self.s = s
         self._text = text
@@ -716,7 +718,9 @@ class Card(tk.Frame):
         self._title = title
         self._hw = ()
 
-        self.canvas = tk.Canvas(self, bg=page, highlightthickness=0, bd=0)
+        # 宽度给 1，避免 Canvas 默认的 378px 反过来决定卡片宽度；
+        # 高度不设初值，等宽度确定后由下面的自适应逻辑回调
+        self.canvas = tk.Canvas(self, bg=page, highlightthickness=0, bd=0, width=1)
         self.canvas.pack(fill="both", expand=True)
 
         self.body = tk.Frame(self.canvas, bg=THEME["card"])
@@ -733,7 +737,9 @@ class Card(tk.Frame):
     def _relayout(self):
         c = self.canvas
         w, h = c.winfo_width(), c.winfo_height()
-        if w <= 8 or h <= 8:
+        if w < 40 or h <= 8:
+            # 宽度尚未确定（首次布局）时不要参与高度计算，
+            # 否则正文在 1px 宽度下算出的高度会把整张卡片压塌
             return
         c.delete("deco")
         pad, r = 1, self.radius
@@ -1134,9 +1140,9 @@ class App(tk.Tk):
         body.rowconfigure(2, weight=1)
 
         # ---- 左栏：选择打印机 + 连接信息 ----
-        side = tk.Frame(body, bg=THEME["bg"], width=int(238 * s))
+        side = tk.Frame(body, bg=THEME["bg"], width=int(159 * s))
         side.grid(row=0, column=0, rowspan=3, sticky="nsew", padx=(0, int(5 * s)))
-        side.grid_propagate(False)
+        side.pack_propagate(False)
 
         card_p = Card(side, "选择打印机", s)
         card_p.pack(fill="x")
@@ -1226,8 +1232,8 @@ class App(tk.Tk):
 
         row0 = tk.Frame(body, bg=THEME["card"])
         row0.pack(fill="x", padx=pad, pady=(int(8 * s), 0))
-        tk.Label(row0, text="WIFI", bg=THEME["card"], fg=THEME["text_dim"],
-                 font=(FONT, 9), width=5, anchor="w").pack(side="left")
+        tk.Label(row0, text="WiFi", bg=THEME["card"], fg=THEME["text_dim"],
+                 font=(FONT, 9), width=4, anchor="w").pack(side="left")
         self.lbl_wifi_cur = tk.Label(row0, text="—", bg=THEME["card"], fg=THEME["text"],
                                      font=(FONT, 9), anchor="w")
         self.lbl_wifi_cur.pack(side="left", fill="x", expand=True)
@@ -1235,7 +1241,7 @@ class App(tk.Tk):
         row1 = tk.Frame(body, bg=THEME["card"])
         row1.pack(fill="x", padx=pad, pady=(int(6 * s), 0))
         self.btn_wifi = tk.Menubutton(
-            row1, text="点“扫描”获取列表 ▾", bg=THEME["row"], fg=THEME["text"],
+            row1, text="选择 ▾", bg=THEME["row"], fg=THEME["text"],
             activebackground=THEME["btn"], activeforeground=THEME["text"],
             relief="flat", anchor="w", font=(FONT, 9), cursor="hand2",
             padx=int(7 * s), pady=int(3 * s))
@@ -1251,7 +1257,8 @@ class App(tk.Tk):
         row2.pack(fill="x", padx=pad, pady=(int(6 * s), 0))
         self.ent_pwd = tk.Entry(row2, show="*", bg=THEME["row"], fg=THEME["text"],
                                 insertbackground=THEME["text"], relief="flat",
-                                font=(FONT, 9), width=8)
+                                highlightthickness=1, highlightbackground=THEME["line"],
+                                highlightcolor=THEME["accent"], font=(FONT, 9), width=8)
         self.ent_pwd.pack(side="left", fill="x", expand=True, ipady=int(4 * s))
         self.btn_wifi_connect = RoundButton(row2, text="连接", width=52, height=26, s=s,
                                             font_size=9, fill=THEME["accent"],
@@ -1262,7 +1269,7 @@ class App(tk.Tk):
         row3 = tk.Frame(body, bg=THEME["card"])
         row3.pack(fill="x", padx=pad, pady=(int(6 * s), int(8 * s)))
         tk.Label(row3, text="网线", bg=THEME["card"], fg=THEME["text_dim"],
-                 font=(FONT, 9), width=5, anchor="w").pack(side="left")
+                 font=(FONT, 9), width=4, anchor="w").pack(side="left")
         self.lbl_eth = tk.Label(row3, text="—", bg=THEME["card"], fg=THEME["text_dim"],
                                 font=(FONT, 9), anchor="w")
         self.lbl_eth.pack(side="left", fill="x", expand=True)
@@ -1354,19 +1361,19 @@ class App(tk.Tk):
         """两列 grid：左列标签按实际文字宽度，右列数值，避免固定 width 把冒号截掉。"""
         s = self.s
         box = tk.Frame(card.body, bg=THEME["card"])
-        box.pack(fill="both", expand=True, padx=int(12 * s), pady=int(12 * s))
+        box.pack(fill="both", expand=True, padx=int(8 * s), pady=int(10 * s))
         box.columnconfigure(1, weight=1)
 
         self.info_val = {}
-        rows = (("model", "机器型号"), ("sn", "序列号"), ("ip", "IP 地址"),
-                ("port", "端口"), ("lift", "Z 轴系数"), ("state", "连接状态"))
+        rows = (("model", "型号"), ("sn", "序列号"), ("ip", "IP"),
+                ("port", "端口"), ("lift", "Z 系数"), ("state", "状态"))
         for r, (key, title) in enumerate(rows):
             tk.Label(box, text=title + "：", bg=THEME["card"], fg=THEME["text_dim"],
                      font=(FONT, 9), anchor="w").grid(
                 row=r, column=0, sticky="w", pady=int(4 * s))
             val = tk.Label(box, text="—", bg=THEME["card"], fg=THEME["text"],
                            font=(FONT, 9), anchor="w")
-            val.grid(row=r, column=1, sticky="w", padx=(int(10 * s), 0),
+            val.grid(row=r, column=1, sticky="w", padx=(int(7 * s), 0),
                      pady=int(4 * s))
             self.info_val[key] = val
 
@@ -1395,8 +1402,7 @@ class App(tk.Tk):
             row = PrinterRow(self.rows_box, self.s, lambda r, idx=i: self._select_index(idx))
             row.pack(fill="x", pady=(0, int(6 * self.s)))
             model = entry.get("model") or entry.get("name") or ""
-            row.update_text("机器型号：" + model,
-                            "IP 地址：" + entry["ip"], i == self.current_index)
+            row.update_text(model, "IP " + entry["ip"], i == self.current_index)
             self.printer_rows.append(row)
 
     def _select_index(self, idx, save=True):
@@ -1406,7 +1412,7 @@ class App(tk.Tk):
         for i, row in enumerate(self.printer_rows):
             entry = self.cfg["printers"][i]
             model = entry.get("model") or entry.get("name") or ""
-            row.update_text("机器型号：" + model, "IP 地址：" + entry["ip"], i == idx)
+            row.update_text(model, "IP " + entry["ip"], i == idx)
         if save:
             self.cfg["last"] = self.cfg["printers"][idx]["ip"]
             save_config(self.cfg)
@@ -1762,12 +1768,28 @@ class App(tk.Tk):
             self._pick_wifi(labels[0])
         else:
             self._wifi_sel = None
-            self.btn_wifi.configure(text="未发现 WiFi ▾")
+            self.btn_wifi.configure(text=self._fit_wifi_text("未发现 WiFi"))
         self._log("扫描到 %d 个 WiFi。" % len(labels))
+
+    def _fit_wifi_text(self, text):
+        """窄侧栏放不下长 SSID：按实测可用宽度截断，完整名仍在下拉菜单里。"""
+        avail = self.btn_wifi.winfo_width() - int(18 * self.s)
+        if avail < int(20 * self.s):
+            avail = int(60 * self.s)
+        try:
+            f = tkfont.Font(family=FONT, size=9)
+            if f.measure(text + "  \u25be") <= avail:
+                return text + "  \u25be"
+            cut = text
+            while cut and f.measure(cut + "\u2026  \u25be") > avail:
+                cut = cut[:-1]
+            return cut + "\u2026  \u25be"
+        except Exception:
+            return text + "  \u25be"
 
     def _pick_wifi(self, label):
         self._wifi_sel = label
-        self.btn_wifi.configure(text=label + "  \u25be")
+        self.btn_wifi.configure(text=self._fit_wifi_text(label))
 
     def _connect_wifi(self):
         if self._printing:
@@ -1975,8 +1997,8 @@ class App(tk.Tk):
     def _apply_network(self, info, eth):
         info = info or {}
         ssid = info.get("ssid") or "—"
-        ip = info.get("ip") or ""
-        self.lbl_wifi_cur.configure(text=("%s   %s" % (ssid, ip)).strip())
+        # 窄侧栏只留 SSID，IP 在“连接信息”和状态栏里各有一份
+        self.lbl_wifi_cur.configure(text=ssid)
         eth = eth or {}
         dhcp = eth.get("ipEth0Dhcp")
         static = eth.get("ipEth0Static")

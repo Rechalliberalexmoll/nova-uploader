@@ -1,75 +1,123 @@
-# NovaUploader
+﻿# NovaUploader
 
-Nova3D 树脂 3D 打印机的第三方管理工具（Windows 桌面）。直接调用打印机固件自带的 HTTP 接口（端口 8081），不依赖官方 NovaMaker，也不需要联网或登录账号。
+![platform](https://img.shields.io/badge/platform-Windows-blue)
+![python](https://img.shields.io/badge/python-3.9%2B-3776AB)
+![license](https://img.shields.io/badge/license-MIT-green)
 
-## 为什么有这个工具
+Nova3D 树脂 3D 打印机的第三方管理工具。直接调用打印机固件自带的 HTTP 接口（8081 端口），不依赖官方 NovaMaker，也不需要联网或登录账号。
 
-NovaMaker 2.6.8 出现过「一点上传就卡死」的问题，排查后是系统级原因：**打开 Windows 原生文件对话框后，进程的 Winsock 会处于未初始化状态**，之后所有网络请求都会失败（`getaddrinfo` 报 `[Errno 10093]`）。NovaMaker 不会自愈，所以卡死后只能杀进程。
+起因是官方软件在这台机器上「一点上传就卡死」。查下去发现不是网络问题——是打开 Windows 原生文件对话框后，进程的 Winsock 会处于未初始化状态，之后所有网络请求都报 `[Errno 10093]`，而 NovaMaker 不会自愈，只能杀进程重启。既然接口都是公开的 HTTP，干脆自己写一个，顺手把这个坑也填了。
 
-本工具直接绕开这条路径，并对上述问题做了自动修复（重新调用 `WSAStartup`），选完文件后网络依然正常。
+![主界面](assets/main.png)
 
-## 功能
+## 特性
 
-- **上传**：多选 `.cws`，实时进度条，失败原样提示
-- **文件列表**：列出打印机上的文件（名称 / 大小 / 修改时间），可批量删除
-- **打印状态**：实时层进度、已用与剩余时间、当前层曝光、层高、抬升参数
-- **打印控制**：暂停 / 继续、停止、Z 轴升降、归位。打印进行中会自动锁定 Z 轴与归位，避免顶坏正在成型的件
-- **打印历史**：按打印机（序列号）分组，长期留存，可查看每次的结束时间、用时、平均层时、层厚等参数
-- **网络设置**：扫描并连接 WiFi，查看有线网卡状态。打印机无线出问题、改走网线直连时用得上
-- **多打印机**：按序列号区分，下拉切换
-- **完成通知**：打印结束弹出提醒并播放提示音，可开关
+- **上传**：多选 `.cws`，实时进度与速度。实测 2 MB 文件 2.5 秒（约 0.79 MB/s，受打印机 Wi-Fi 写入速度限制），20 MB 的件约 25 秒
+- **打印状态**：层进度、已用与剩余时间、当前层曝光、层高、抬升距离与速度。底层与常规层自动切换显示
+- **打印控制**：暂停 / 继续、停止、Z 轴升降（0.05 / 1 / 10 / 50 四档）、归位。**打印进行中会自动锁定 Z 轴与归位**，避免把正在成型的件顶坏
+- **打印历史**：按打印机序列号分组，长期留存，可查看每次的结束时间、用时、平均层时、层厚。打印机自己只保留最近 10 条任务，这是唯一能长期留存记录的地方
+- **网络设置**：扫描 WiFi 列表并按信号强度排序、连接、查看有线网卡状态。打印机无线出问题、改走网线直连时用得上
+- **多打印机**：按序列号（而非 IP）区分，换 WiFi 或 DHCP 换地址后记录不会错乱
+- **完成通知**：打印结束弹出桌面浮窗并播放提示音，成功与取消/停止用不同颜色区分，可在状态栏关闭
+- **自动修 Winsock**：选完文件立刻重新调用 `WSAStartup`，网络层另有 `10093` 检测重试兜底——这是本项目存在的原因
+- **界面**：深色卡片式布局，配色取自 NovaMaker 原版（页面 `#323232`、卡片 `#464646`、强调蓝 `#0097E0`），圆角进度条与按钮均为自绘
 
-## 已测试设备
+## 环境要求
 
-- Nova3D L3130-K40（固件 6.0.6）
+- Windows 10 / 11
+- **用预编译 exe 无需任何依赖**；从源码运行需要 Python 3.9 以上（含 tkinter，官方安装包默认自带）
 
-其他 Nova3D 机型使用同一套 8081 接口，理论上通用。个别机型的 `Z 轴移动` 参数不是真实毫米值，可在配置里用 `lift_scale` 校准（校准方式见下）。
+## 快速开始
 
-## 使用
+1. 从 [Releases](https://github.com/Rechalliberalexmoll/nova-uploader/releases) 下载 `NovaUploader.exe`
+2. 双击运行，点「＋ 添加」，填入打印机 IP
+3. 点选该打印机即可连接，之后直接用「选择 .cws 文件」上传
 
-1. 从 Release 下载 `NovaUploader.exe`，双击运行（不需要安装 Python）
-2. 点「＋ 添加」，填入打印机 IP，点选即可连接
-3. 上传：点「选择 .cws 文件」→「开始上传」
-4. 打印控制、网络设置、打印历史都在主界面上直接操作
+配置与历史会自动生成在 `%APPDATA%\NovaUploader\`，与程序目录分离，挪动或重命名 exe 都不会丢。
 
-## 数据位置
+## 用法
 
-配置与历史保存在 `%APPDATA%\NovaUploader\`，与程序目录分离，移动或重命名 exe 都不会丢：
+- **上传**：选文件 → 队列 → 「开始上传」。文件名保持原样传给打印机，同名文件会被覆盖
+- **删除**：文件列表里多选 → 「删除选中」，会二次确认
+- **开始打印**：选中文件后点「开始打印」，打印机立即开始工作
+- **打印控制**：Z 轴与归位在打印中不可用；停止打印不可恢复，会二次确认
+- **打印历史**：底部状态栏「打印历史」，可按打印机筛选，也可在横幅上直接看到「上次 XX 结束」
 
-```
-%APPDATA%\NovaUploader\printers.json   打印机列表、Z 轴系数、上次目录
-%APPDATA%\NovaUploader\history.json    打印历史
-```
+不写注册表、不装服务。卸载 = 删掉 exe，再删 `%APPDATA%\NovaUploader\`。
 
-## 从源码运行与构建
+## 工作原理
 
-```bash
-python NovaUploader.py
-```
+Nova3D 打印机固件在 `8081` 端口暴露一组 HTTP 接口，本工具只用到这些：
 
-打包成单文件 exe：
+| 用途 | 接口 |
+|:---|:---|
+| 上传 | `POST /file/upload/<文件名>`，body 为文件原始字节 |
+| 文件列表 | `GET /file/list` |
+| 删除 | `GET /file/delete/<文件名>` |
+| 任务状态 | `GET /job/list` |
+| 暂停 / 继续 | `GET /job/toggle/<任务id>` |
+| 停止 | `GET /job/stop/<任务id>` |
+| 开始打印 | `GET /file/print/<文件名>` |
+| Z 轴移动 | `GET /printer/move/<距离>` |
+| 归位 | `GET /printer/home` |
+| 设备信息 | `GET /setting/model`、`/setting/snsid`、`/setting/currentVersion` |
+| WiFi | `GET /setting/wifiList`、`/setting/wifiInfo`、`/setting/connectWifi/<ssid>/<密码>/<security>` |
 
-```bash
-pip install pyinstaller
-pyinstaller --noconfirm --onefile --windowed --name NovaUploader NovaUploader.py
-```
+几个踩出来的细节：
+
+**上传必须用原始字节，不能用 multipart。** 实测用 `multipart/form-data` 传 52 字节的内容，打印机存下来是 270 字节——把整个请求体当成文件存了。改成 `Content-Type: application/octet-stream` + 原始 body 后，2 MB 文件存入的字节数与源文件完全一致。
+
+**打印机的 Web 服务很弱。** 部分接口（`/job/getImg`、`/setting/ethInfo`）固定返回 HTTP 500 且每次要等满 5 秒；`/printer/home` 可能十秒不回。所以所有请求串行化，任务轮询间隔 5 秒，避免把它的服务打满。
+
+**HTTP 直连，不读系统代理。** 用 `http.client` 直连打印机，走系统代理会让局域网请求被转发出去而失败。
+
+**隐私**：只与局域网内的打印机通信，不联网、不写日志文件、不上报任何数据。日志只存在内存里，窗口关掉即清空。
 
 ## Z 轴系数校准
 
-如果点 `↑10` 后平台实际升高不是 10 mm，说明该机型的参数不是毫米单位。量出实际升高值 `H`，则：
+个别机型的 `/printer/move/` 参数不是真实毫米值。点一次 `↑10`，量出平台实际升高 `H` 毫米，则：
 
 ```
 lift_scale = H / 10
 ```
 
-填进 `printers.json` 对应打印机的 `lift_scale` 字段，重启工具生效。默认 `1.0` 表示参数即毫米。
+填进 `printers.json` 对应打印机的 `lift_scale`，重启工具生效。默认 `1.0` 表示参数即毫米。
+
+## 从源码构建
+
+```powershell
+pip install pyinstaller
+pyinstaller --noconfirm --onefile --windowed --name NovaUploader `
+  --icon NovaUploader.ico NovaUploader.py
+```
+
+产出单个 exe（约 11 MB）。直接运行源码则只需 `python NovaUploader.py`。
+
+## 仓库结构
+
+```
+NovaUploader.py           单文件源码（界面 + 打印机接口 + 逻辑）
+NovaUploader.ico          应用图标（构建用）
+启动 NovaUploader.vbs      源码版启动器（用 pythonw 运行，不弹黑框）
+assets/main.png           界面截图
+```
 
 ## 已知限制
 
-- 固件不提供电机负载、Z 限位、温度等遥测数据，因此无法做硬件级的异常检测
-- 部分机型的 `/job/getImg`（任务缩略图）固定返回 HTTP 500，无法显示打印预览
+- **过渡层曝光没有单独处理**：当前按「前 N 层底层、之后常规」两段显示。`.cws` 里的 `chitubox.gcode` 头部其实带 `transitionLayerCount`，过渡层曝光是逐层递减的，读数只能从文件里解析——本工具尚未做，所以过渡层区间显示的是常规层曝光
+- 固件不提供电机负载、Z 限位、温度等遥测，无法做硬件级异常检测。官方 App 同样拿不到，是固件层面就没有
+- 部分机型的 `/job/getImg` 固定返回 500，无法显示任务缩略图
 - `resinUsage` / `totalCost` 两个字段固件恒返回 0，不做用量与成本统计
+- 已测试机型仅 Nova3D L3130-K40（固件 6.0.6），其他 Nova3D 机型共用同一套接口，理论上通用
+- exe 未做代码签名，他人首次运行可能被 SmartScreen 拦一次（「更多信息」→「仍要运行」）
+
+## 致谢
+
+- Nova3D / NovaMaker — 打印机固件的 HTTP 接口，以及界面配色的参考来源
+- 本工具与 Nova 官方无关，属第三方工具
 
 ## License
 
-[MIT](LICENSE)
+MIT
+
+Copyright (c) 2026 Rechalliberalexmoll

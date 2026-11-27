@@ -2,7 +2,7 @@
 
 **简体中文** | [English](README.en.md)
 
-![version](https://img.shields.io/badge/version-0.6.9-blue)
+![version](https://img.shields.io/badge/version-0.7.0-blue)
 ![platform](https://img.shields.io/badge/platform-Windows-blue)
 ![python](https://img.shields.io/badge/python-3.9%2B-3776AB)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -128,8 +128,10 @@ exe 与 apk 均走 Release，不入库；`printers.json` / `history.json` 含打
 - **Z 轴**：四档升降 + 归位，打印中自动锁定
 - **文件列表**：点选打印机上的文件直接起印（不做上传）
 - **打印历史**：默认折叠，展开显示打印机上最近 10 条任务
+- **运行日志**：记录连接状态变化、开始/暂停/继续/结束、Z 轴与起印等动作结果，保留最近 300 条，可清空。只存内存不落盘
+- **打印完成通知**：任务结束时发系统通知，可随手关闭；安卓 13+ 会请求通知权限
 
-已在 Nova3D L3130-K40（固件 6.0.6）上实机验证：状态刷新、暂停/继续、停止、Z 轴四档升降与归位、从文件列表起印均正常。
+已在 Nova3D L3130-K40（固件 6.0.6）上实机验证：状态刷新、暂停/继续、停止、Z 轴四档升降与归位、从文件列表起印、运行日志、打印完成通知均正常。
 
 构建需要 JDK 17、Android build-tools 34 与 platform 34，不使用 Gradle：
 
@@ -137,7 +139,7 @@ exe 与 apk 均走 Release，不入库；`printers.json` / `history.json` 含打
 powershell -ExecutionPolicy Bypass -File android\build.ps1
 ```
 
-工具链默认放在 `D:\AndroidDev`，可用环境变量 `ANDROID_TOOLCHAIN` 指向其他位置。产物为 `android\NovaCtl.apk`（约 49 KB）。
+工具链默认放在 `D:\AndroidDev`，可用环境变量 `ANDROID_TOOLCHAIN` 指向其他位置。产物为 `android\NovaCtl.apk`（约 53 KB）。
 
 安装时允许「未知来源」即可。签名密钥 `novactl.keystore` 已入库，目的是保证后续版本能覆盖安装、不丢数据；若要公开发布，建议换成自己的密钥并妥善保管。
 

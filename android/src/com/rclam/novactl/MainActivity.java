@@ -1,10 +1,19 @@
 package com.rclam.novactl;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,6 +22,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,7 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity {
 
     /** 与桌面版 NovaUploader 同代，便于两边对照。 */
-    private static final String APP_VERSION = "0.6.9";
+    private static final String APP_VERSION = "0.7.0";
     private static final int PORT = 8081;
     private static final int POLL_MS = 3000;
     private static final int TIMEOUT_MS = 5000;
@@ -58,9 +68,23 @@ public class MainActivity extends Activity {
     private TextView tvConn, tvDev, tvPill, tvJob, tvLayers, tvTime, tvParams;
     private TextView tvHistory, tvHistoryArrow, tvZHint, tvFileHint;
     private ProgressBar pb;
-    private Button btnPause, btnStop, btnHome, btnPrint;
+    private Button btnPause, btnStop, btnHome, btnPrint, btnNotify, btnLog;
     private LinearLayout llFiles, llHistoryHead;
     private final List<Button> zButtons = new ArrayList<Button>();
+
+    // ---- 日志与通知 ----
+    private static final int LOG_LIMIT = 300;
+    private static final String CHANNEL_ID = "nova_job";
+    private static final int NOTIFY_ID = 1001;
+    private static final int REQ_NOTIFY = 101;
+
+    private final List<String> logs = new ArrayList<String>();
+    private boolean notifyOn = true;
+    /** 只在状态真正变化时记日志，避免 3 秒一次的轮询把日志刷满。 */
+    private String lastConnLog = "";
+    private boolean lastPrinting = false;
+    private boolean lastPaused = false;
+    private String lastJobName = "";
 
     private final List<TextView> fileRowViews = new ArrayList<TextView>();
     private final List<String> fileRowNames = new ArrayList<String>();
@@ -91,6 +115,8 @@ public class MainActivity extends Activity {
         btnStop = (Button) findViewById(R.id.btnStop);
         btnHome = (Button) findViewById(R.id.btnHome);
         btnPrint = (Button) findViewById(R.id.btnPrint);
+        btnNotify = (Button) findViewById(R.id.btnNotify);
+        btnLog = (Button) findViewById(R.id.btnLog);
         llFiles = (LinearLayout) findViewById(R.id.llFiles);
         llHistoryHead = (LinearLayout) findViewById(R.id.llHistoryHead);
 
@@ -108,6 +134,10 @@ public class MainActivity extends Activity {
         SharedPreferences sp = getSharedPreferences("nova", MODE_PRIVATE);
         ip = sp.getString("ip", "");
         etIp.setText(ip);
+        notifyOn = sp.getBoolean("notify", true);
+        updateNotifyBtn();
+        addLog("应用启动 v" + APP_VERSION);
+        requestNotifyPermission();
 
         findViewById(R.id.btnSave).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -121,6 +151,8 @@ public class MainActivity extends Activity {
                 getSharedPreferences("nova", MODE_PRIVATE).edit()
                         .putString("ip", ip).apply();
                 lastFileSig = "";
+                lastConnLog = "";
+                addLog("打印机地址改为 " + ip);
                 toast("已保存");
                 ui.removeCallbacks(pollTick);
                 ui.post(pollTick);
@@ -225,6 +257,27 @@ public class MainActivity extends Activity {
             }
         });
 
+        // 通知开关
+        btnNotify.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                notifyOn = !notifyOn;
+                getSharedPreferences("nova", MODE_PRIVATE).edit()
+                        .putBoolean("notify", notifyOn).apply();
+                updateNotifyBtn();
+                addLog("通知" + (notifyOn ? "开启" : "关闭"));
+                if (notifyOn) requestNotifyPermission();
+            }
+        });
+
+        // 日志
+        btnLog.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showLog();
+            }
+        });
+
         // 历史折叠
         llHistoryHead.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -244,6 +297,155 @@ public class MainActivity extends Activity {
         running = false;
         ui.removeCallbacks(pollTick);
         super.onDestroy();
+    }
+
+    // ---------------- 日志与通知 ----------------
+
+    private void addLog(String text) {
+        String flat = text.replace('\n', ' ').replace("  ", " ").trim();
+        String line = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date()) + "  " + flat;
+        synchronized (logs) {
+            logs.add(line);
+            while (logs.size() > LOG_LIMIT) {
+                logs.remove(0);
+            }
+        }
+    }
+
+    private void clearLog() {
+        synchronized (logs) {
+            logs.clear();
+        }
+        addLog("日志已清空");
+    }
+
+    private void showLog() {
+        String body;
+        int count;
+        synchronized (logs) {
+            count = logs.size();
+            if (count == 0) {
+                body = "暂无日志";
+            } else {
+                StringBuilder sb = new StringBuilder();
+                for (int i = count - 1; i >= 0; i--) {
+                    sb.append(logs.get(i)).append('\n');
+                }
+                body = sb.toString();
+            }
+        }
+        TextView tv = new TextView(this);
+        tv.setText(body);
+        tv.setTextSize(11);
+        tv.setTextColor(colorOf(R.color.text_dim));
+        tv.setTypeface(android.graphics.Typeface.MONOSPACE);
+        tv.setTextIsSelectable(true);
+        tv.setPadding(dp(12), dp(10), dp(12), dp(10));
+
+        ScrollView sv = new ScrollView(this);
+        sv.addView(tv, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        int lines = Math.min(count, 16);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(20 * lines + 26)));
+
+        new AlertDialog.Builder(this)
+                .setTitle("运行日志（" + count + " 条）")
+                .setView(sv)
+                .setPositiveButton("关闭", null)
+                .setNeutralButton("清空", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) {
+                        clearLog();
+                    }
+                })
+                .show();
+    }
+
+    private void updateNotifyBtn() {
+        btnNotify.setText(notifyOn ? R.string.notify_on : R.string.notify_off);
+        btnNotify.setTextColor(colorOf(notifyOn ? R.color.ok : R.color.text_dim));
+    }
+
+    private void requestNotifyPermission() {
+        if (Build.VERSION.SDK_INT < 33) return;
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) return;
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFY);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] perms, int[] granted) {
+        super.onRequestPermissionsResult(code, perms, granted);
+        if (code == REQ_NOTIFY) {
+            boolean ok = granted.length > 0 && granted[0] == PackageManager.PERMISSION_GRANTED;
+            addLog(ok ? "通知权限已授予" : "通知权限被拒绝，打印完成时不会提醒");
+        }
+    }
+
+    private void ensureChannel() {
+        if (Build.VERSION.SDK_INT < 26) return;
+        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm.getNotificationChannel(CHANNEL_ID) == null) {
+            NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "打印任务",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            ch.setDescription("打印完成提醒");
+            nm.createNotificationChannel(ch);
+        }
+    }
+
+    private void notifyDone(String job) {
+        if (!notifyOn) {
+            addLog("通知已关闭，跳过打印完成提醒");
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            addLog("缺少通知权限，未发送提醒");
+            return;
+        }
+        try {
+            ensureChannel();
+            int pflags = Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0;
+            PendingIntent pi = PendingIntent.getActivity(this, 0,
+                    new Intent(this, MainActivity.class), pflags);
+            Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                    ? new Notification.Builder(this, CHANNEL_ID)
+                    : new Notification.Builder(this);
+            b.setSmallIcon(android.R.drawable.stat_sys_download_done)
+                    .setContentTitle("打印完成")
+                    .setContentText(job.length() > 0 ? job : "任务已结束")
+                    .setAutoCancel(true)
+                    .setContentIntent(pi);
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            nm.notify(NOTIFY_ID, b.build());
+            addLog("已发送通知：打印完成 " + job);
+        } catch (Exception e) {
+            addLog("通知发送失败：" + shortErr(e));
+        }
+    }
+
+    /** 把状态变化写进日志，并在打印结束时发通知。轮询每 3 秒一次，所以必须去重。 */
+    private void trackEvents(Ui u) {
+        if (!u.conn.equals(lastConnLog)) {
+            lastConnLog = u.conn;
+            addLog("已连接".equals(u.conn) ? "已连接：" + u.dev : u.conn);
+        }
+        if (u.printing && !lastPrinting) {
+            lastJobName = u.job;
+            addLog("开始打印：" + u.job);
+        } else if (u.printing && u.paused && !lastPaused) {
+            addLog("已暂停打印：" + lastJobName);
+        } else if (u.printing && !u.paused && lastPaused) {
+            addLog("已继续打印：" + lastJobName);
+        } else if (!u.printing && lastPrinting) {
+            addLog("打印结束：" + lastJobName);
+            notifyDone(lastJobName);
+        }
+        lastPrinting = u.printing;
+        lastPaused = u.paused;
     }
 
     // ---------------- 轮询 ----------------
@@ -476,6 +678,8 @@ public class MainActivity extends Activity {
         paused = u.paused;
         jobId = u.jobId;
 
+        trackEvents(u);
+
         if (!u.fileSig.equals(lastFileSig)) {
             lastFileSig = u.fileSig;
             rebuildFiles(u.files);
@@ -584,6 +788,7 @@ public class MainActivity extends Activity {
                     msg = "失败：" + shortErr(e);
                 }
                 final String shown = label + " → " + summarize(msg);
+                addLog(shown);
                 ui.post(new Runnable() {
                     @Override
                     public void run() {

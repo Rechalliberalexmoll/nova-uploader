@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | **English**
 
-![version](https://img.shields.io/badge/version-0.6.9-blue)
+![version](https://img.shields.io/badge/version-0.7.0-blue)
 ![platform](https://img.shields.io/badge/platform-Windows-blue)
 ![python](https://img.shields.io/badge/python-3.9%2B-3776AB)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -128,8 +128,10 @@ The phone talks straight to the printer — no PC in the middle, no vendor cloud
 - **Z axis** — four jog steps plus home, locked automatically while printing
 - **File list** — pick a file already on the printer and start it (no upload)
 - **Print history** — collapsed by default; expands to the printer's last 10 jobs
+- **Runtime log** — connection changes, start / pause / resume / finish, Z moves and print actions. Last 300 entries, in memory only, clearable
+- **Finish notification** — system notification when a job ends, with a toggle; asks for permission on Android 13+
 
-Verified on hardware (Nova3D L3130-K40, firmware 6.0.6): live status, pause / resume, stop, the four Z jog steps plus home, and starting a print from the file list.
+Verified on hardware (Nova3D L3130-K40, firmware 6.0.6): live status, pause / resume, stop, the four Z jog steps plus home, starting a print from the file list, the runtime log, and the finish notification.
 
 Building needs JDK 17, Android build-tools 34 and platform 34. No Gradle:
 
@@ -137,7 +139,7 @@ Building needs JDK 17, Android build-tools 34 and platform 34. No Gradle:
 powershell -ExecutionPolicy Bypass -File android\build.ps1
 ```
 
-The toolchain defaults to `D:\AndroidDev`; set `ANDROID_TOOLCHAIN` to point elsewhere. Output is `android\NovaCtl.apk` (about 49 KB).
+The toolchain defaults to `D:\AndroidDev`; set `ANDROID_TOOLCHAIN` to point elsewhere. Output is `android\NovaCtl.apk` (about 53 KB).
 
 On the phone, allow "unknown sources" and install. The signing key `novactl.keystore` is committed so later builds upgrade in place without losing data; if you plan to publish the app, swap it for your own key and keep it safe.
 

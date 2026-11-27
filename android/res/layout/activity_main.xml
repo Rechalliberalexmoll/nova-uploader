@@ -368,6 +368,23 @@
                 android:visibility="gone" />
         </LinearLayout>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnNotify"
+                style="@style/ZBtn"
+                android:text="@string/notify_on" />
+
+            <Button
+                android:id="@+id/btnLog"
+                style="@style/ZBtn"
+                android:text="@string/log" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/tvFoot"
             style="@style/Label"
@@ -387,6 +404,6 @@
             android:layout_marginBottom="8dp"
             android:gravity="center"
             android:textSize="11sp"
-            android:text="v0.6.9" />
+            android:text="v0.7.0" />
     </LinearLayout>
 </ScrollView>

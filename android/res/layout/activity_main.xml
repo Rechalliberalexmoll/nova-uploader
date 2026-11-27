@@ -387,6 +387,6 @@
             android:layout_marginBottom="8dp"
             android:gravity="center"
             android:textSize="11sp"
-            android:text="v0.6.8" />
+            android:text="v0.6.9" />
     </LinearLayout>
 </ScrollView>

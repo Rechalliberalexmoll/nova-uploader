@@ -49,7 +49,7 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
-APP_VERSION = "0.6.8"
+APP_VERSION = "0.6.9"
 
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
@@ -100,9 +100,9 @@ def migrate_legacy_config():
 
 DEFAULT_CONFIG = {
     "printers": [
-        {"name": "Whale3 Pro (192.168.1.61)", "ip": "192.168.1.61", "port": 8081},
+        {"name": "我的打印机 (192.168.1.100)", "ip": "192.168.1.100", "port": 8081},
     ],
-    "last": "192.168.1.61",
+    "last": "192.168.1.100",
 }
 
 
@@ -1009,7 +1009,7 @@ class AddPrinterDialog(DarkDialog):
     def _on_ok(self):
         ip = self.ent_ip.get().strip()
         if not re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", ip):
-            self.lbl_err.configure(text="IP 格式不对，应形如 192.168.1.61")
+            self.lbl_err.configure(text="IP 格式不对，应形如 192.168.1.100")
             return
         if any(int(x) > 255 for x in ip.split(".")):
             self.lbl_err.configure(text="IP 每段必须在 0-255 之间")
@@ -1376,7 +1376,7 @@ class App(tk.Tk):
                 row=r, column=0, sticky="w", pady=int(4 * s))
             val = tk.Label(box, text="—", bg=THEME["card"], fg=THEME["text"],
                            font=(FONT, 9), anchor="w")
-            val.grid(row=r, column=1, sticky="w", padx=(int(7 * s), 0),
+            val.grid(row=r, column=1, sticky="w", padx=(int(4 * s), 0),
                      pady=int(4 * s))
             self.info_val[key] = val
 

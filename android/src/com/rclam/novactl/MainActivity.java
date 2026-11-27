@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity {
 
     /** 与桌面版 NovaUploader 同代，便于两边对照。 */
-    private static final String APP_VERSION = "0.6.8";
+    private static final String APP_VERSION = "0.6.9";
     private static final int PORT = 8081;
     private static final int POLL_MS = 3000;
     private static final int TIMEOUT_MS = 5000;
@@ -114,7 +114,7 @@ public class MainActivity extends Activity {
             public void onClick(View v) {
                 String v2 = etIp.getText().toString().trim();
                 if (!v2.matches("\\d{1,3}(\\.\\d{1,3}){3}")) {
-                    toast("IP 格式不正确，应形如 192.168.1.61");
+                    toast("IP 格式不正确，应形如 192.168.1.100");
                     return;
                 }
                 ip = v2;
@@ -638,7 +638,7 @@ public class MainActivity extends Activity {
 
     // ---------------- 工具 ----------------
 
-    /** /setting/printerInfo 返回 "型号-序列号"，如 L3130-K40-6ac87b198a。 */
+    /** /setting/printerInfo 返回 "型号-序列号"，如 L3130-K40-XXXXXXXXXX。 */
     private static String prettyDev(String raw) {
         String s = raw == null ? "" : raw.trim();
         if (s.isEmpty()) return "—";

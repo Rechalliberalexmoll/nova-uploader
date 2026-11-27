@@ -1,4 +1,6 @@
-﻿# NovaUploader
+# NovaUploader
+
+**简体中文** | [English](README.en.md)
 
 ![version](https://img.shields.io/badge/version-0.6.0-blue)
 ![platform](https://img.shields.io/badge/platform-Windows-blue)

@@ -49,6 +49,8 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
+APP_VERSION = "1.0.0"
+
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAHn0lEQVR42u1bXUhUXRtde58zzk02jT+RUQlBQXRhWiYNlE1k"
@@ -987,7 +989,8 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.update_idletasks()
         self._dark_titlebar()
-        self._log("工具已启动，数据目录：%s" % DATA_DIR)
+        self._log("NovaUploader v%s 已启动，数据目录：%s"
+                  % (APP_VERSION, DATA_DIR))
         if self._migrated:
             self._log("已把 printers.json 从程序目录迁移到用户目录"
                       "（原文件改名为 printers.json.migrated）")
@@ -2082,7 +2085,7 @@ class App(tk.Tk):
 class LogWindow(tk.Toplevel):
     def __init__(self, master, s, lines):
         super().__init__(master)
-        self.title("运行日志")
+        self.title("运行日志  ·  NovaUploader v%s" % APP_VERSION)
         self.configure(bg=THEME["bg"])
         self.geometry("%dx%d" % (int(760 * s), int(460 * s)))
         self.txt = tk.Text(self, bg=THEME["card"], fg=THEME["text_dim"], bd=0,

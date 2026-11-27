@@ -49,7 +49,7 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
-APP_VERSION = "0.6.7"
+APP_VERSION = "0.6.8"
 
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
@@ -1243,11 +1243,14 @@ class App(tk.Tk):
         self.btn_wifi = tk.Menubutton(
             row1, text="选择 ▾", bg=THEME["row"], fg=THEME["text"],
             activebackground=THEME["btn"], activeforeground=THEME["text"],
-            relief="flat", anchor="w", font=(FONT, 9), cursor="hand2",
+            relief="flat", bd=0, highlightthickness=1,
+            highlightbackground=THEME["line"], highlightcolor=THEME["accent"],
+            anchor="w", font=(FONT, 9), cursor="hand2",
             padx=int(7 * s), pady=int(3 * s))
         self.menu_wifi = tk.Menu(self.btn_wifi, tearoff=0, bg=THEME["card"],
                                  fg=THEME["text"], activebackground=THEME["accent"],
-                                 activeforeground="#FFFFFF", font=(FONT, 9), bd=0)
+                                 activeforeground="#FFFFFF", font=(FONT, 9), bd=0,
+                                 relief="flat", activeborderwidth=0)
         self.btn_wifi.configure(menu=self.menu_wifi)
         self.btn_wifi.pack(side="left", fill="x", expand=True)
         RoundButton(row1, text="扫描", width=52, height=26, s=s, font_size=9,
@@ -2239,7 +2242,8 @@ class HistoryWindow(tk.Toplevel):
             padx=int(8 * s), pady=int(3 * s))
         self.menu_filter = tk.Menu(self.btn_filter, tearoff=0, bg=THEME["card"],
                                    fg=THEME["text"], activebackground=THEME["accent"],
-                                   activeforeground="#FFFFFF", font=(FONT, 9), bd=0)
+                                   activeforeground="#FFFFFF", font=(FONT, 9), bd=0,
+                                 relief="flat", activeborderwidth=0)
         self.btn_filter.configure(menu=self.menu_filter)
         self.btn_filter.pack(side="left")
         self.lbl_count = tk.Label(head, text="", bg=THEME["bg"], fg=THEME["text_dim"],

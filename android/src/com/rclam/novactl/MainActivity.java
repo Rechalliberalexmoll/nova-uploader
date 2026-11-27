@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity {
 
     /** 与桌面版 NovaUploader 同代，便于两边对照。 */
-    private static final String APP_VERSION = "0.6.7";
+    private static final String APP_VERSION = "0.6.8";
     private static final int PORT = 8081;
     private static final int POLL_MS = 3000;
     private static final int TIMEOUT_MS = 5000;

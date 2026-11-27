@@ -13,6 +13,3 @@ printers.json
 printers.json.*
 history.json
 *.migrated
-
-# 图标（第三方商标，不随仓库分发）
-NovaUploader.ico

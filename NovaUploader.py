@@ -49,7 +49,7 @@ CONFIG_PATH_LEGACY = os.path.join(APP_DIR, "printers.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HISTORY_LIMIT = 300
 
-APP_VERSION = "0.6.2"
+APP_VERSION = "0.6.3"
 
 # NovaMaker 的图标（64x64 PNG，内嵌以免打包后还要带外部文件）
 ICON_PNG_B64 = (
@@ -1034,22 +1034,22 @@ class App(tk.Tk):
                   selectforeground=[("readonly", THEME["text"])])
 
         # 底部状态条
-        status = tk.Frame(self, bg=THEME["bg"], height=int(36 * s))
+        status = tk.Frame(self, bg=THEME["bg"], height=int(42 * s))
         status.pack(side="bottom", fill="x")
         status.pack_propagate(False)
         # 先摆按钮：按钮宽度固定，标签只占剩余空间，长文本不会再挤坏按钮
         RoundButton(status, text="日志", width=74, height=26, s=s,
-                    command=self._show_log).pack(side="right", padx=int(12 * s), pady=int(5 * s))
+                    command=self._show_log).pack(side="right", padx=int(12 * s), pady=int(8 * s))
         RoundButton(status, text="打印历史", width=90, height=26, s=s,
                     command=self._show_history).pack(side="right", padx=(0, int(6 * s)),
-                                                     pady=int(5 * s))
+                                                     pady=int(8 * s))
         self.btn_notify = RoundButton(status, text="", width=82, height=26, s=s,
                                       command=self._toggle_notify)
-        self.btn_notify.pack(side="right", padx=(0, int(6 * s)), pady=int(5 * s))
+        self.btn_notify.pack(side="right", padx=(0, int(6 * s)), pady=int(8 * s))
         self._sync_notify_btn()
 
         self.lbl_status = tk.Label(status, text="就绪", bg=THEME["bg"], fg=THEME["text_dim"],
-                                   font=(FONT, 9), anchor="w")
+                                   font=(FONT, 9), anchor="w", justify="left")
         self.lbl_status.pack(side="left", fill="x", expand=True,
                              padx=(int(14 * s), int(6 * s)))
 

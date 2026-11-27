@@ -183,8 +183,8 @@ class Printer:
     def __init__(self, ip, port=DEFAULT_PORT, lift_scale=1.0):
         self.ip = ip
         self.port = port
-        # 抬升参数换算系数。多数 Nova 机器 move 参数就是毫米（=1.0）；
-        # 个别机型（如 L3130-K40）不是真实高度，需在校准后填实测系数。
+        # 抬升参数换算系数。实测 Nova 机器的 move 参数即毫米，保持 1.0；
+        # 仅当某机型实测偏差明显时才需要校正（系数 = 实测毫米 / 请求值）。
         try:
             self.lift_scale = float(lift_scale)
         except (TypeError, ValueError):

@@ -109,6 +109,7 @@ android/                  Android monitor
   res/                     resources and layouts
   src/                     Java sources
 assets/main.png           desktop app screenshot
+assets/android.png        Android app screenshot
 README.md / README.en.md
 LICENSE
 ```
@@ -116,6 +117,8 @@ LICENSE
 Both the exe and the apk ship through Releases and are not committed. `printers.json` / `history.json` contain printer IPs and serial numbers and are excluded via `.gitignore`.
 
 ## Android app
+
+![Android app](assets/android.png)
 
 The phone talks straight to the printer — no PC in the middle, no vendor cloud. It is a subset of the desktop app, built around status and quick control:
 
@@ -134,7 +137,7 @@ Building needs JDK 17, Android build-tools 34 and platform 34. No Gradle:
 powershell -ExecutionPolicy Bypass -File android\build.ps1
 ```
 
-The toolchain defaults to `D:\AndroidDev`; set `ANDROID_TOOLCHAIN` to point elsewhere. Output is `android\NovaCtl.apk` (about 61 KB).
+The toolchain defaults to `D:\AndroidDev`; set `ANDROID_TOOLCHAIN` to point elsewhere. Output is `android\NovaCtl.apk` (about 49 KB).
 
 On the phone, allow "unknown sources" and install. The signing key `novactl.keystore` is committed so later builds upgrade in place without losing data; if you plan to publish the app, swap it for your own key and keep it safe.
 

@@ -109,6 +109,7 @@ android/                   安卓监控端
   res/                     资源与布局
   src/                     Java 源码
 assets/main.png            桌面版界面截图
+assets/android.png         安卓端界面截图
 README.md / README.en.md
 LICENSE
 ```
@@ -116,6 +117,8 @@ LICENSE
 exe 与 apk 均走 Release，不入库；`printers.json` / `history.json` 含打印机 IP 与序列号，已在 `.gitignore` 中排除。
 
 ## 安卓端
+
+![安卓端界面](assets/android.png)
 
 手机直连打印机，不经过电脑，也不经过厂商云端。功能是桌面版的子集，聚焦「看状态 + 简单控制」：
 
@@ -134,7 +137,7 @@ exe 与 apk 均走 Release，不入库；`printers.json` / `history.json` 含打
 powershell -ExecutionPolicy Bypass -File android\build.ps1
 ```
 
-工具链默认放在 `D:\AndroidDev`，可用环境变量 `ANDROID_TOOLCHAIN` 指向其他位置。产物为 `android\NovaCtl.apk`（约 61 KB）。
+工具链默认放在 `D:\AndroidDev`，可用环境变量 `ANDROID_TOOLCHAIN` 指向其他位置。产物为 `android\NovaCtl.apk`（约 49 KB）。
 
 安装时允许「未知来源」即可。签名密钥 `novactl.keystore` 已入库，目的是保证后续版本能覆盖安装、不丢数据；若要公开发布，建议换成自己的密钥并妥善保管。
 
